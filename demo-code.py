@@ -1,11 +1,39 @@
+### Overview
 
-### Pump Instructions
+'''
+This document contains working code for testing all the sensors, the pump, and LCD screen
+in our plant watering project. You will need to go through each section and run some 
+commands in the terminal to get each sensor's library installed. For sensors you do not wish
+to use, simply comment out their section of the code.
+'''
+
+
+
+### Needed for all hardware
+
+#Listed below are the default I2C addresses for each hardware element in this document
+
+import board
+from time import *
+
+i2c_port = 1
+pump_address = 0x63
+light_address = 0x29
+bme_address = 0x77
+soil_address = 0x48
+co2_address = 0x62
+lcd_address = 0x27
+i2c = board.I2C()
+
+
+
+### Atlas Pump
 
 '''
 1) run "cd ~" and then "git clone https://github.com/AtlasScientific/Raspberry-Pi-sample-code.git"
 We learned that this git repostory contains essential code in addition to the sample.
 
-2) Refer tp "Raspberry Pi sample code: I2C Mode" instructions that are provided by 
+2) Refer to "Raspberry Pi sample code: I2C Mode" instructions that are provided by 
 Atlas Scientific, which these steps reference
 
 3) python-smbus and i2c-tools are already bundled with RPiOS
@@ -29,25 +57,6 @@ heet on the Atlas Scientific website for a full list of commands
 
 '''
 
-
-### Needed for all sensors
-
-import board
-from time import *
-
-i2c_port = 1
-pump_address = 0x63
-light_address = 0x29
-bme_address = 0x77
-soil_address = 0x48
-co2_address = 0x62
-lcd_address = 0x27
-i2c = board.I2C()
-
-
-
-### Atlas Pump
-
 from AtlasI2C import AtlasI2C
 
 pump = AtlasI2C()
@@ -59,6 +68,8 @@ pump.set_i2c_address(int(pump_address))
 
 ### LCD Instructions
 
+#The library for the LCD should have downloaded from the 'git clone' command
+
 import I2C_LCD_driver
 
 mylcd = I2C_LCD_driver.lcd()
@@ -67,6 +78,8 @@ mylcd.lcd_display_string("Hello World", 1, 0)
 
 
 ### Color Sensor TCS34725
+
+#In the terminal, run 'sudo pip3 install adafruit-circuitpython-tcs34725 --break-system-packages'
 
 import adafruit_tcs34725
 
@@ -77,7 +90,7 @@ light_sensor = adafruit_tcs34725.TCS34725(i2c, int(light_address))
 
 ### BME280 Temp, Pressure, Humidity
 
-#In the terminal run 'pip3 install adafruit-circuitpython-bme280'
+#In the terminal run 'sudo pip3 install adafruit-circuitpython-bme280 --break-system-packages'
 
 from adafruit_bme280 import basic as adafruit_bme280
 import smbus2
@@ -92,9 +105,10 @@ BME_temp = bme280.temperature
 
 
 ### Soil Sensor
-'''
-In the terminal, run 'sudo pip3 install adafruit-circuitpython-ads1x15 --break-system-packages'
 
+#In the terminal, run 'sudo pip3 install adafruit-circuitpython-ads1x15 --break-system-packages'
+
+'''
 The soil sensor is our only sensor that is not I2C compatible. Its data is analogue.
 Therefore, it has to be run through an ADC (Analogue Digital Converter) since the RPi
 does not have a GPIO pin that receives analogue data (as an aside, Arduinos do have an analogue pin).
