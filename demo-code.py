@@ -18,11 +18,12 @@ from time import *
 
 i2c_port = 1
 pump_address = 0x63
-light_address = 0x29
+color_address = 0x29
 bme_address = 0x77
 soil_address = 0x48
 co2_address = 0x62
 lcd_address = 0x27
+light_address = 0x29
 i2c = board.I2C()
 
 
@@ -80,11 +81,12 @@ mylcd.lcd_display_string("Hello World", 1, 0)
 ### Color Sensor TCS34725
 
 #In the terminal, run 'sudo pip3 install adafruit-circuitpython-tcs34725 --break-system-packages'
+Color_Sensor_On = False
 
-import adafruit_tcs34725
-
-light_sensor = adafruit_tcs34725.TCS34725(i2c, int(light_address))
-#print(light_sensor.color_rgb_bytes)
+if Color_Sensor_On:
+	import adafruit_tcs34725
+	light_sensor = adafruit_tcs34725.TCS34725(i2c, int(color_address))
+	#print(light_sensor.color_rgb_bytes)
 
 
 
@@ -92,6 +94,7 @@ light_sensor = adafruit_tcs34725.TCS34725(i2c, int(light_address))
 
 #In the terminal run 'sudo pip3 install adafruit-circuitpython-bme280 --break-system-packages'
 
+BME_Sensor_On = True
 from adafruit_bme280 import basic as adafruit_bme280
 import smbus2
 
@@ -121,6 +124,7 @@ The code below is for talking to the ADC. Part of what you need to do is calibra
 so that we know what these values mean. I have some examples of readings I took below.
 '''
 
+Soil_Sensor_On = False
 import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 ads = ADS.ADS1115(i2c)
@@ -136,13 +140,27 @@ soil_sensor = AnalogIn(ads, ADS.P0)
 ### CO2 Sensor
 
 #In the terminal, run 'sudo pip3 install adafruit-circuitpython-scd4x --break-system-packages'
-
+CO2_Sensor_On = True
 import adafruit_scd4x as CO2
 CO2_sensor = CO2.SCD4X(i2c, int(co2_address))
 CO2_sensor.start_periodic_measurement()
 print("Waiting for first measurement...")
 
 
+
+### Light Sensor
+
+#In the terminal, run 'sudo pip3 install adafruit-circuitpython-tsl2591 --break-system-packages'
+import adafruit_tsl2591 as Light
+
+Light_Sensor_On = True
+
+if Light_Sensor_On:
+	Light_sensor = Light.TSL2591(i2c, int(light_address))
+	lux = Light_sensor.lux
+	visible = Light_sensor.visible		
+	IR = Light_sensor.infrared
+	#print("Brightness: {}, Visible Light: {}, Infrared Light: {}".format(lux, visible, IR))
 
 ### The code itself!
 
@@ -161,37 +179,53 @@ while True:
 while True:
 	mylcd.lcd_clear()
 	
-
-	red = light_sensor.color_rgb_bytes[0]
-	green = light_sensor.color_rgb_bytes[1]
-	blue = light_sensor.color_rgb_bytes[2]
-	soil_value = soil_sensor.value
+	if Color_Sensor_On:
+		red = light_sensor.color_rgb_bytes[0]
+		green = light_sensor.color_rgb_bytes[1]
+		blue = light_sensor.color_rgb_bytes[2]
+		print("R:" + str(red) + " G:" + str(green) + " B:" + str(blue))
+		mylcd.lcd_display_string("R:" + str(red) + " G:" + str(green) + " B:" + str(blue), 1, 0)
 	
-	print("R:" + str(red) + " G:" + str(green) + " B:" + str(blue))
-	print("Soil Moist:%d" % soil_value)
-	mylcd.lcd_display_string("R:" + str(red) + " G:" + str(green) + " B:" + str(blue), 1, 0)
-	mylcd.lcd_display_string("Soil Moist:{}".format(soil_value), 2, 0)
-	sleep(2)
+	if Soil_Sensor_On:
+		soil_value = soil_sensor.value
+		mylcd.lcd_display_string("Soil Moist:{}".format(soil_value), 2, 0)
+		print("Soil Moist:%d" % soil_value)
+		sleep(2)
+		
+	if CO2_Sensor_On:
+		if CO2_sensor.data_ready:
+			CO2_temp = round(CO2_sensor.temperature, 1)
+			CO2_humidity = round(CO2_sensor.relative_humidity, 1)
+			CO2_CO2 = CO2_sensor.CO2
+		
+		print("CO2_Temp: {} *C".format(CO2_temp))
+		print("CO2: {} ppm".format(CO2_CO2))
+		mylcd.lcd_clear()
+		mylcd.lcd_display_string("Temp: {} *C".format(CO2_temp), 1, 0)
+		mylcd.lcd_display_string("CO2: {} ppm".format(CO2_CO2), 2, 0) 
+		sleep(2)
 	
-	if CO2_sensor.data_ready:
-		CO2_temp = CO2_sensor.temperature
-		CO2_humidity = CO2_sensor.relative_humidity
-		CO2_CO2 = CO2_sensor.CO2
-	
-	print("CO2_Temp: {} *C".format(CO2_temp))
-	print("CO2: {} ppm".format(CO2_CO2))
-	mylcd.lcd_clear()
-	mylcd.lcd_display_string("Temp: {} *C".format(CO2_temp), 1, 0)
-	mylcd.lcd_display_string("CO2: {} ppm".format(CO2_CO2), 2, 0) 
-	sleep(2)
-	
-	print("CO2_Humid: {} %".format(CO2_humidity))
-	mylcd.lcd_clear()
-	mylcd.lcd_display_string("Humid: {} %".format(CO2_humidity), 2, 0)
-	sleep(2)
-	
-	BME_humidity = bme280.humidity
-	BME_pressure = bme280.pressure
-	BME_temp = bme280.temperature
-	print("BME_Temp: {}, BME_Pressure: {}, BME_Humidity: {}".format(BME_temp, BME_pressure, BME_humidity))
-	sleep(2)
+		print("CO2_Humid: {} %".format(CO2_humidity))
+		mylcd.lcd_clear()
+		mylcd.lcd_display_string("Humid: {} %".format(CO2_humidity), 2, 0)
+		sleep(2)
+		
+	if BME_Sensor_On:
+		BME_humidity = round(bme280.humidity, 1)
+		BME_pressure = round(bme280.pressure, 1)
+		BME_temp = round(bme280.temperature, 1)
+		print("BME_Temp: {}, BME_Pressure: {}, BME_Humidity: {}".format(BME_temp, BME_pressure, BME_humidity))
+		mylcd.lcd_clear()
+		mylcd.lcd_display_string("Press: {} hPa".format(BME_pressure), 1, 0)
+		mylcd.lcd_display_string("Humid: {} %".format(BME_humidity), 2, 0)
+		sleep(2)
+		
+	if Light_Sensor_On:
+		lux = round(Light_sensor.lux, 1)
+		visible = Light_sensor.visible
+		IR = Light_sensor.infrared
+		print("Brightness: {}, Visible Light: {}, Infrared Light: {}".format(lux, visible, IR))
+		mylcd.lcd_clear()
+		mylcd.lcd_display_string("Bright: {} Lux".format(lux), 1, 0)
+		mylcd.lcd_display_string("IR: {} , Vis: {}".format(IR, visible), 2, 0)
+		sleep(2)
